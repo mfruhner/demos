@@ -50,6 +50,7 @@ def launch_setup(context, *args, **kwargs):
     use_sim_time = LaunchConfiguration("use_sim_time").perform(context).lower() == "true"
     follower_commands_topic = LaunchConfiguration("follower_commands_topic").perform(context)
     joint_config_file = LaunchConfiguration("joint_config_file").perform(context)
+    follower_joint_config_file = LaunchConfiguration("follower_joint_config_file").perform(context)
 
     description_file = LaunchConfiguration("description_file").perform(context)
     ros2_control_file = LaunchConfiguration("ros2_control_file").perform(context)
@@ -135,6 +136,8 @@ def launch_setup(context, *args, **kwargs):
             {
                 "leader_joint_states_topic": f"/{namespace}/joint_states",
                 "follower_commands_topic": follower_commands_topic,
+                "leader_joint_config_file": joint_config_file,
+                "follower_joint_config_file": follower_joint_config_file,
             }
         ],
         output="both",
@@ -189,6 +192,14 @@ def generate_launch_description():
             "Each robot requires its own calibration file. "
             "See config/hardware/leader.yaml for an example. "
             "If not set, only URDF settings are used.",
+        ),
+        DeclareLaunchArgument(
+            "follower_joint_config_file",
+            default_value="",
+            description="Path to the FOLLOWER's joint calibration YAML. Used together with "
+            "'joint_config_file' to remap leader angles onto the follower's calibrated "
+            "travel range. Without it, angles are forwarded unchanged and the arms will "
+            "not match wherever their ranges differ.",
         ),
         DeclareLaunchArgument(
             "description_file",

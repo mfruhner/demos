@@ -19,12 +19,21 @@
 Subscribes to the leader's joint_states topic and publishes position
 commands to the follower's forward_position_controller/commands topic.
 
+Leader and follower are calibrated independently, so the same joint angle in
+radians does not correspond to the same physical pose. When both calibration
+YAMLs are supplied, each joint is remapped through the leader's travel range
+into the follower's, matching how LeRobot normalizes motor positions. Without
+them the relay falls back to forwarding radians unchanged.
+
 The joint ordering in the outgoing Float64MultiArray matches the
 follower's forward_position_controller configuration:
   [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
 """
 
+import math
+
 import rclpy
+import yaml
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
@@ -39,6 +48,27 @@ JOINT_ORDER = [
     "gripper_joint",
 ]
 
+TICKS_PER_TURN = 4096
+# Matches kStsMidpoint in feetech_ros2_driver, the zero of the reported joint angle.
+TICK_MIDPOINT = 2048
+
+
+def _load_ranges(path: str) -> dict[str, tuple[float, float]]:
+    """Read the per-joint [range_min, range_max] tick limits from a calibration YAML."""
+    with open(path) as config_file:
+        document = yaml.safe_load(config_file) or {}
+
+    ranges = {}
+    for name, params in (document.get("joints") or {}).items():
+        if not isinstance(params, dict) or "range_min" not in params or "range_max" not in params:
+            continue
+        low = float(params["range_min"])
+        high = float(params["range_max"])
+        if low != high:
+            ranges[name] = (low, high)
+
+    return ranges
+
 
 class LeaderTeleopNode(Node):
     """ROS 2 node that relays leader joint states to follower commands."""
@@ -49,14 +79,63 @@ class LeaderTeleopNode(Node):
 
         self.declare_parameter("leader_joint_states_topic", "/leader/joint_states")
         self.declare_parameter("follower_commands_topic", "/forward_position_controller/commands")
+        self.declare_parameter("leader_joint_config_file", "")
+        self.declare_parameter("follower_joint_config_file", "")
 
         leader_topic = self.get_parameter("leader_joint_states_topic").get_parameter_value().string_value
         follower_topic = self.get_parameter("follower_commands_topic").get_parameter_value().string_value
+        leader_config = self.get_parameter("leader_joint_config_file").get_parameter_value().string_value
+        follower_config = self.get_parameter("follower_joint_config_file").get_parameter_value().string_value
+
+        self._calibration = self._build_calibration(leader_config, follower_config)
 
         self.publisher_ = self.create_publisher(Float64MultiArray, follower_topic, 10)
         self.subscription_ = self.create_subscription(JointState, leader_topic, self._joint_states_cb, 10)
 
         self.get_logger().info(f"Teleop relay: {leader_topic} -> {follower_topic}")
+
+    def _build_calibration(self, leader_config: str, follower_config: str) -> dict[str, tuple[float, ...]]:
+        """Pair the leader and follower tick ranges for every joint present in both files."""
+        if not leader_config or not follower_config:
+            self.get_logger().warn(
+                "leader_joint_config_file and/or follower_joint_config_file not set; "
+                "forwarding joint angles unchanged. Leader and follower poses will differ "
+                "wherever their calibrated ranges differ."
+            )
+            return {}
+
+        try:
+            leader_ranges = _load_ranges(leader_config)
+            follower_ranges = _load_ranges(follower_config)
+        except (OSError, yaml.YAMLError, ValueError) as error:
+            self.get_logger().error(f"Failed to load calibration, forwarding joint angles unchanged: {error}")
+            return {}
+
+        calibration = {
+            name: (*leader_ranges[name], *follower_ranges[name])
+            for name in leader_ranges
+            if name in follower_ranges
+        }
+
+        for name in JOINT_ORDER:
+            if name not in calibration:
+                self.get_logger().warn(f"No leader/follower range pair for '{name}'; forwarding it unchanged.")
+
+        self.get_logger().info(f"Range remapping enabled for {len(calibration)} joints.")
+        return calibration
+
+    def _remap(self, joint_name: str, position: float) -> float:
+        """Map a leader angle onto the follower's calibrated travel range."""
+        calibration = self._calibration.get(joint_name)
+        if calibration is None:
+            return position
+
+        leader_min, leader_max, follower_min, follower_max = calibration
+        leader_tick = position * TICKS_PER_TURN / (2.0 * math.pi) + TICK_MIDPOINT
+        ratio = min(1.0, max(0.0, (leader_tick - leader_min) / (leader_max - leader_min)))
+        follower_tick = follower_min + ratio * (follower_max - follower_min)
+
+        return (follower_tick - TICK_MIDPOINT) * 2.0 * math.pi / TICKS_PER_TURN
 
     def _joint_states_cb(self, msg: JointState):
         """Map incoming JointState positions to a Float64MultiArray in the expected order."""
@@ -72,7 +151,7 @@ class LeaderTeleopNode(Node):
                     throttle_duration_sec=2.0,
                 )
                 return
-            cmd.data.append(name_to_pos[joint_name])
+            cmd.data.append(self._remap(joint_name, name_to_pos[joint_name]))
 
         self.publisher_.publish(cmd)
 
