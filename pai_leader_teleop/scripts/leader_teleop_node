@@ -97,7 +97,7 @@ class LeaderTeleopNode(Node):
     def _build_calibration(self, leader_config: str, follower_config: str) -> dict[str, tuple[float, ...]]:
         """Pair the leader and follower tick ranges for every joint present in both files."""
         if not leader_config or not follower_config:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 "leader_joint_config_file and/or follower_joint_config_file not set; "
                 "forwarding joint angles unchanged. Leader and follower poses will differ "
                 "wherever their calibrated ranges differ."
@@ -119,7 +119,7 @@ class LeaderTeleopNode(Node):
 
         for name in JOINT_ORDER:
             if name not in calibration:
-                self.get_logger().warn(f"No leader/follower range pair for '{name}'; forwarding it unchanged.")
+                self.get_logger().warning(f"No leader/follower range pair for '{name}'; forwarding it unchanged.")
 
         self.get_logger().info(f"Range remapping enabled for {len(calibration)} joints.")
         return calibration
@@ -146,7 +146,7 @@ class LeaderTeleopNode(Node):
         cmd.data = []
         for joint_name in JOINT_ORDER:
             if joint_name not in name_to_pos:
-                self.get_logger().warn(
+                self.get_logger().warning(
                     f"Joint '{joint_name}' not found in leader joint states, skipping message.",
                     throttle_duration_sec=2.0,
                 )
