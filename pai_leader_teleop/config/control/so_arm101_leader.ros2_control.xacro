@@ -61,6 +61,9 @@
       <joint name="${prefix}gripper_joint">
         <param name="id">6</param>
         <param name="p_coefficient">16</param>
+        <!-- Calibrated travel spans differ per gripper; scale it onto the URDF limits (closed..open). -->
+        <param name="angle_at_range_min">0.0</param>
+        <param name="angle_at_range_max">1.70</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
       </joint>

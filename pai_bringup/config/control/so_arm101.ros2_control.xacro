@@ -102,6 +102,9 @@
         <param name="protection_current">250</param>
         <param name="overload_torque">25</param>
         <param name="initial_position">0.0</param>
+        <!-- Calibrated travel spans differ per gripper; scale it onto the URDF limits (closed..open). -->
+        <param name="angle_at_range_min">0.0</param>
+        <param name="angle_at_range_max">1.70</param>
         <command_interface name="position">
           <!-- PID gains: only read by gz_ros2_control (Gazebo hardware interface) -->
           <param name="p">100.0</param>

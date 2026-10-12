@@ -61,6 +61,10 @@ def _spawn_cameras(context):
                 namespace=ns,
                 parameters=[param_file, {"use_sim_time": False}],
                 output="screen",
+                # VIDIOC_STREAMON aborts the node if the device is still held by a
+                # previous run or is momentarily short on USB bandwidth.
+                respawn=True,
+                respawn_delay=2.0,
             )
         )
 

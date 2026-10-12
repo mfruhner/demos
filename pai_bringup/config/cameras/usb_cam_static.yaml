@@ -30,7 +30,7 @@
 
 /static_camera/cam_static:
   ros__parameters:
-    video_device: "/dev/cam_static"
+    video_device: "/dev/so101_cam_static"
     frame_id: "static_camera_link"
     camera_name: "cam_static"
     camera_info_url: "package://pai_bringup/config/cameras/default_640x480.yaml"

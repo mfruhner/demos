@@ -213,6 +213,7 @@ GZ_RENDERING_ENGINE_PATH = "${CONDA_PREFIX}/lib/gz-rendering-10/engine-plugins"
 ROS_DISTRO = "lyrical"
 # Force ROS 2 to use Zenoh middleware
 RMW_IMPLEMENTATION = "rmw_zenoh_cpp"
+ZENOH_ROUTER_CONFIG_URI= "/home/user/git/physical-ai/so101/zenoh/router_with_bridge.json5"
 # uv/PyPI: large wheels (e.g. torch) need a longer per-request timeout than the default 30s
 UV_HTTP_TIMEOUT = "600"
 # Ignore the user site-packages dir (~/.local/lib/pythonX.Y/site-packages) so stray
