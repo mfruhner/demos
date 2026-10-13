@@ -25,6 +25,9 @@
 
       <joint name="${prefix}shoulder_pan_joint">
         <param name="id">1</param>
+        <!-- Calibrated stops map onto the URDF joint limits (range_min -> lower, range_max -> upper). -->
+        <param name="angle_at_range_min">-1.91986</param>
+        <param name="angle_at_range_max">1.91986</param>
         <param name="p_coefficient">8</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
@@ -32,6 +35,8 @@
 
       <joint name="${prefix}shoulder_lift_joint">
         <param name="id">2</param>
+        <param name="angle_at_range_min">-1.74533</param>
+        <param name="angle_at_range_max">1.74533</param>
         <param name="p_coefficient">16</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
@@ -39,6 +44,8 @@
 
       <joint name="${prefix}elbow_flex_joint">
         <param name="id">3</param>
+        <param name="angle_at_range_min">-1.69</param>
+        <param name="angle_at_range_max">1.54</param>
         <param name="p_coefficient">16</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
@@ -46,6 +53,8 @@
 
       <joint name="${prefix}wrist_flex_joint">
         <param name="id">4</param>
+        <param name="angle_at_range_min">-1.6</param>
+        <param name="angle_at_range_max">1.6</param>
         <param name="p_coefficient">16</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
@@ -61,6 +70,9 @@
       <joint name="${prefix}gripper_joint">
         <param name="id">6</param>
         <param name="p_coefficient">16</param>
+        <!-- Calibrated travel spans differ per gripper; scale it onto the URDF limits (closed..open). -->
+        <param name="angle_at_range_min">0.0</param>
+        <param name="angle_at_range_max">1.70</param>
         <state_interface name="position" />
         <state_interface name="velocity" />
       </joint>
